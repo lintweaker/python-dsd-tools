@@ -7,16 +7,17 @@ some hands on experience with Python.
 **dsf-info.py**
 Standalone script to test and show info for DSD DSF files
 
-Usage:
-./dsf-info.py <path to DSF file>
+*Usage:*
+
+`./dsf-info.py <path to DSF file>`
 
 **dsdiff-info.py**
 
 Standalone script to test DSD DSDIFF files and show relevant info.
 
-Usage:
+*Usage:*
 
-./dsdiff-info.py <path to DSDIFF file>
+`./dsdiff-info.py <path to DSDIFF file>`
 
 **playdsd.py**
 
@@ -25,10 +26,11 @@ Uses dsdlib.py and requires updated pyalsaaudio, ALSA lib and kernel support.
 
 *Usage:*
 
-./playdsd.py -l
+`./playdsd.py -l`
 
 Show available sound cards and prints native DSD playback ability
-./playdsd.py -c <audiocard> -l <DSD file to play>
+
+`./playdsd.py -c <audiocard> -l <DSD file to play>`
 
 
 **dsdlib.py**
