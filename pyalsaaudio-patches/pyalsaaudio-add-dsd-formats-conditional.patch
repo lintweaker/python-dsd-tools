@@ -1,0 +1,25 @@
+diff -uNrp pyalsaaudio-0.7.org/alsaaudio.c pyalsaaudio-0.7.new2/alsaaudio.c
+--- pyalsaaudio-0.7.org/alsaaudio.c	2011-08-09 21:07:41.000000000 +0200
++++ pyalsaaudio-0.7.new2/alsaaudio.c	2014-10-16 10:36:31.863969550 +0200
+@@ -2155,10 +2155,19 @@ PyObject *PyInit_alsaaudio(void)
+     _EXPORT_INT(m, "PCM_FORMAT_IMA_ADPCM",SND_PCM_FORMAT_IMA_ADPCM);
+     _EXPORT_INT(m, "PCM_FORMAT_MPEG",SND_PCM_FORMAT_MPEG);
+     _EXPORT_INT(m, "PCM_FORMAT_GSM",SND_PCM_FORMAT_GSM);
+-    
++    /* DSD_U8 and DSD_U16_LE support included in ALSA lib 1.0.27.x */
++#if SND_LIB_VERSION >= 0x1001b
++    _EXPORT_INT(m, "PCM_FORMAT_DSD_U8", SND_PCM_FORMAT_DSD_U8);
++    _EXPORT_INT(m, "PCM_FORMAT_DSD_U16_LE", SND_PCM_FORMAT_DSD_U16_LE);
++#endif
++    /* DSD_U32_LE support should be included in ALSA lib > 1.0.28.0 */
++#if SND_LIB_VERSION > 0x1001c
++    _EXPORT_INT(m, "PCM_FORMAT_DSD_U32_LE", SND_PCM_FORMAT_DSD_U32_LE);
++#endif
++
+     /* Mixer stuff */
+     _EXPORT_INT(m, "MIXER_CHANNEL_ALL", MIXER_CHANNEL_ALL);
+-    
++
+ #if 0 // Omit for now - use case unknown
+     _EXPORT_INT(m, "MIXER_SCHN_UNKNOWN", SND_MIXER_SCHN_UNKNOWN);
+     _EXPORT_INT(m, "MIXER_SCHN_FRONT_LEFT", SND_MIXER_SCHN_FRONT_LEFT);
