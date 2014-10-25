@@ -42,3 +42,17 @@ The *pyalsaaudio-patches* directory contains patches to add DSD sample format
 support to pyalsaaudio-0.7.
 A SPEC file for Fedora is provided.
 
+#### building from source RPM
+If needed, first setup your system for RPM building, see [Fedora, building a custom kernel] (https://fedoraproject.org/wiki/Building_a_custom_kernel)
+
+Install the source RPM:
+
+`rpm -ivh SRPMS/python-alsaaudio-0.7-8.fc20.src.rpm`
+
+`cd ~/rpmbuild/SPECS`
+
+`rpmbuild -bb --target=$(uname -m) python-alsaaudio.spec`
+
+Install the newly created RPM:
+
+``yum localinstall ~/rpmbuild/RPMS/`uname -m`/python-alsaaudio-0.7-8.fc20.`uname -m`.rpm``
