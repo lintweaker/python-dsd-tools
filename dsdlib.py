@@ -16,97 +16,51 @@
 # Start conversion for usage as DSD library functions dsdlib.py
 # v0.4 07-Oct-14 Jurgen Kramer
 # Add support for DSF
+# v0.5 08-Nov-14 Jurgen Kramer
+# Pythonize a bit
 
 #from struct import unpack, calcsize
 import struct
 import sys
 from ctypes import *
 
-# Basic header
-struct_basic = '>4s'
-struct_basic_len = struct.calcsize(struct_basic)
-struct_unpack_basic = struct.Struct(struct_basic).unpack_from
+dsdiff_data = {
+	'basic' : '>4s',
+	'frm8' : '>4s1Q4s',
+	'fver' : '>1L',
+	'prop' : '>4s',
+	'rate' : '>1L',
+	'chan' : '>1H',
+	'chandes' : '>4s',
+	'cmp' : '>4s1B',
+	'cmpstr' : '>1s',
+	'abbs' : '>1H1B1B1L',
+	'spkr' : '>1H',
+	'data' : '>4s1Q',
+	'dsd_chunk' : '>4s1Q'
+}
 
-# Form DSD Chunk
-struct_frm8_fmt = '>4s1Q4s'
-struct_frm8_len = struct.calcsize(struct_frm8_fmt)
-struct_unpack_frm8 = struct.Struct(struct_frm8_fmt).unpack_from
+length = {}
+unpacked = {}
 
-# Format Version Chunk
-struct_fver_fmt = '>1L'
-struct_fver_len = struct.calcsize(struct_fver_fmt)
-struct_unpack_fver = struct.Struct(struct_fver_fmt).unpack_from
-
-# Property Chunk
-struct_prop_fmt = '>4s'
-struct_prop_len = struct.calcsize(struct_prop_fmt)
-struct_unpack_prop = struct.Struct(struct_prop_fmt).unpack_from
-
-# Sample Rate Chunk
-struct_rate_fmt = '>1L'
-struct_rate_len = struct.calcsize(struct_rate_fmt)
-struct_unpack_rate = struct.Struct(struct_rate_fmt).unpack_from
-
-# Channels Chunk
-struct_chan_fmt = '>1H'
-struct_chan_len = struct.calcsize(struct_chan_fmt)
-struct_unpack_chan = struct.Struct(struct_chan_fmt).unpack_from
-
-# Channel descriptions
-struct_chandes_fmt = '>4s'
-struct_chandes_len = struct.calcsize(struct_chandes_fmt)
-struct_unpack_chandes = struct.Struct(struct_chandes_fmt).unpack_from
-
-# Compression Type Chunk
-struct_cmp_fmt = '>4s1B'
-struct_cmp_len = struct.calcsize(struct_cmp_fmt)
-struct_unpack_cmp = struct.Struct(struct_cmp_fmt).unpack_from
-
-# Compression name
-struct_cmpstr_fmt = '>1s'
-struct_cmpstr_len = struct.calcsize(struct_cmpstr_fmt)
-struct_unpack_cmpstr = struct.Struct(struct_cmpstr_fmt).unpack_from
-
-# Absolute Start Time Chunk
-struct_abbs_fmt = '>1H1B1B1L'
-struct_abbs_len = struct.calcsize(struct_abbs_fmt)
-struct_unpack_abbs = struct.Struct(struct_abbs_fmt).unpack_from
-
-# Loudspeaker Configuration Chunk
-struct_spkr_fmt = '>1H'
-struct_spkr_len = struct.calcsize(struct_spkr_fmt)
-struct_unpack_spkr = struct.Struct(struct_spkr_fmt).unpack_from
-
-# DSD Sound Data Chunk
-struct_dsd_fmt = '>4s1Q'
-struct_dsd_len = struct.calcsize(struct_dsd_fmt)
-struct_unpack_dsd = struct.Struct(struct_dsd_fmt).unpack_from
-
-# Basis chunk, ID + chunk_size only
-struct_dsd_chunk = '>4s1Q'
-struct_dsd_chunk_len = struct.calcsize(struct_dsd_chunk)
-struct_unpack_dsd_chunk = struct.Struct(struct_dsd_chunk).unpack_from
+for x in dsdiff_data:
+	length[x] = struct.calcsize(dsdiff_data[x])
+	unpacked[x] = struct.Struct(dsdiff_data[x]).unpack_from
 
 
-# DSF 'DSD ' chunk
-struct_dsf_hdr = '<4sQ1Q1Q1'
-struct_dsf_hdr_len = struct.calcsize(struct_dsf_hdr)
-struct_unpack_dsf_hdr = struct.Struct(struct_dsf_hdr).unpack_from
+dsf_data = {
+	'hdr' : '<4sQ1Q1Q1',
+	'fmt' : '<4sQ1L1L1L1L1L1L1Q1L1L1',
+	'data' : '<4s1Q',
+	'meta' : '<3s'
+}
 
-# DSF fmt chunk
-struct_fmt_chunk = '<4sQ1L1L1L1L1L1L1Q1L1L1'
-struct_fmt_chunk_len = struct.calcsize(struct_fmt_chunk)
-struct_unpack_fmt_chunk = struct.Struct(struct_fmt_chunk).unpack_from
+dsf_length = {}
+dsf_unpacked = {}
 
-# DSF data chunk
-struct_data_chunk = '<4s1Q'
-struct_data_chunk_len = struct.calcsize(struct_data_chunk)
-struct_unpack_data_chunk = struct.Struct(struct_data_chunk).unpack_from
-
-# DSF metadata chunk
-struct_meta_chunk = '<3s'
-struct_meta_chunk_len = struct.calcsize(struct_meta_chunk)
-struct_unpack_meta_chunk = struct.Struct(struct_meta_chunk).unpack_from
+for x in dsf_data:
+	dsf_length[x] = struct.calcsize(dsf_data[x])
+	dsf_unpacked[x] = struct.Struct(dsf_data[x]).unpack_from
 
 # dsdfile, store useful info of a DSD file
 #
@@ -157,8 +111,8 @@ def getfiletype(filename, dsdfile):
 	results = []
 	with open(filename, "rb") as f:
 
-		data = f.read(struct_basic_len)
-		s = struct_unpack_basic(data)
+		data = f.read(length['basic'])
+		s = unpacked['basic'](data)
 		results.append(s)
 		chunk_id = results[0][0]			# Should be 'FRM8' or 'DSD '
 
@@ -217,37 +171,34 @@ def dsdtype(rate):
 			return "DSD512, fs = 48kHz"
 	return "DSD??"
 
-# Handle local chunks of property chunk
+# DSDIFF Handle local chunks of property chunk
 def handle_prop_local_chunks(size, handle, dsdfile):
 	ret = 0
 	curpos = handle.tell()
 	maxpos = curpos + size
 	#print "Property local chunks, total size is %d , cur pos = %d" % (size, curpos)
 	props = []
-	propdata = handle.read(struct_prop_len)
-	s = struct_unpack_prop(propdata)
+	propdata = handle.read(length['prop'])
+	s = unpacked['prop'](propdata)
 	props.append(s)
 	chunk_id = props[0][0]					# Should be 'SND '
 	if chunk_id == 'SND ':
 
 		while curpos < maxpos:
 			# Read next chunk ID + chunk size
-			propdata = handle.read(struct_dsd_len)
-			s = struct_unpack_dsd_chunk(propdata)
+			propdata = handle.read(length['data'])
+			s = unpacked['data'](propdata)
 			props.append(s)
 
 			chunk_id = props[1][0]
 			chunk_size = props[1][1]
 
-			#print "2nd local property chunk '%s'" % chunk_id
-			#print "2nd local property chunk size is %d" % chunk_size
-
 			# Sample Rate Chunk
 			if chunk_id == 'FS  ':
 				#print "Sample Rate Chunk"
 				props = []
-				propdata = handle.read(struct_rate_len)
-				s = struct_unpack_rate(propdata)
+				propdata = handle.read(length['rate'])
+				s = unpacked['rate'](propdata)
 				props.append(s)
 				rate = props[0][0]
 				#print "Sample rate: %d Hz" % rate
@@ -262,16 +213,16 @@ def handle_prop_local_chunks(size, handle, dsdfile):
 			if chunk_id == 'CHNL':
 				#print "Channels Chunk"
 				props = []
-				propdata = handle.read(struct_chan_len)
-				s = struct_unpack_chan(propdata)
+				propdata = handle.read(length['chan'])
+				s = unpacked['chan'](propdata)
 				props.append(s)
 				channels = props[0][0]
 				#print "File has %d channels" % channels
 				dsdfile.channels = channels
 				for i in range(0, channels):
 					props = []
-					propdata = handle.read(struct_chandes_len)
-					s = struct_unpack_chandes(propdata)
+					propdata = handle.read(length['chandes'])
+					s = unpacked['chandes'](propdata)
 					props.append(s)
 					chandes = props[0][0]
 					#print "Channel: %s" % chandes
@@ -283,8 +234,8 @@ def handle_prop_local_chunks(size, handle, dsdfile):
 			if chunk_id == 'CMPR':
 				#print "Compression Type Chunk"
 				props = []
-				propdata = handle.read(struct_cmp_len)
-				s = struct_unpack_cmp(propdata)
+				propdata = handle.read(length['cmp'])
+				s = unpacked['cmp'](propdata)
 				props.append(s)
 				cmptype = props[0][0]
 				cmplen = props[0][1]
@@ -296,8 +247,8 @@ def handle_prop_local_chunks(size, handle, dsdfile):
 
 				#print "Compression string length: %d" % cmplen
 				for i in range(0, cmplen+1):
-					propdata = handle.read(struct_cmpstr_len)
-					s = struct_unpack_cmpstr(propdata)
+					propdata = handle.read(length['cmpstr'])
+					s = unpacked['cmpstr'](propdata)
 					#print "%s" % s,
 					
 				ret += 1
@@ -309,8 +260,8 @@ def handle_prop_local_chunks(size, handle, dsdfile):
 				#print "Absolute Start Time Chunk"
 				#print "Size %d" % chunk_size
 				props = []
-				propdata = handle.read(struct_abbs_len)
-				s = struct_unpack_abbs(propdata)
+				propdata = handle.read(length['abbs'])
+				s = unpacked['abbs'](propdata)
 				props.append(s)
 				hrs = props[0][0]
 				mins = props[0][1]
@@ -329,8 +280,8 @@ def handle_prop_local_chunks(size, handle, dsdfile):
 					return ret
 
 				props = []
-				propdata = handle.read(struct_spkr_len)
-				s = struct_unpack_spkr(propdata)
+				propdata = handle.read(length['spkr'])
+				s = unpacked['spkr'](propdata)
 				props.append(s)
 				spkrcfg = props[0][0]
 				#print "Speaker config is: %d" % spkrcfg
@@ -359,8 +310,8 @@ def check_dsdiff(filename, dsdfile):
 	with open(filename, "rb") as f:
 
 		# Read header of the file and check for the needed DSDIFF ID's
-		data = f.read(struct_frm8_len)
-		s = struct_unpack_frm8(data)
+		data = f.read(length['frm8'])
+		s = unpacked['frm8'](data)
 		results.append(s)
 		chunk_id = results[0][0]				# Should be 'FRM8'
 		dsd_file_size = results[0][1]
@@ -384,17 +335,17 @@ def check_dsdiff(filename, dsdfile):
 		# Loop through all the remaining chunks
 		while True:
 			results = []
-			data = f.read(struct_dsd_chunk_len)
+			data = f.read(length['dsd_chunk'])
 			if not data: break
-			s = struct_unpack_dsd_chunk(data)
+			s = unpacked['dsd_chunk'](data)
 			results.append(s)
 			chunk_id = results[0][0]
 			chunk_size = results[0][1]
 
 			if chunk_id == 'FVER':
 				results = []
-				data = f.read(struct_fver_len)
-				s = struct_unpack_fver(data)
+				data = f.read(length['fver'])
+				s = unpacked['fver'](data)
 				results.append(s)
 				version = results[0][0]
 				if version != 0x1050000 and version != 0x1040000:
@@ -471,8 +422,8 @@ def check_dsf(filename, dsdfile):
 	with open(filename, "rb") as f:
 
 		# Read header of the file and check for the needed DSF ID
-		data = f.read(struct_dsf_hdr_len)
-		s = struct_unpack_dsf_hdr(data)
+		data = f.read(dsf_length['hdr'])
+		s = dsf_unpacked['hdr'](data)
 		results.append(s)
 		chunk_id = results[0][0]		# Should be 'DSD '
 
@@ -496,8 +447,8 @@ def check_dsf(filename, dsdfile):
 
 		# Read the fmt chunk
 		results = []
-		data = f.read(struct_fmt_chunk_len)
-		s = struct_unpack_fmt_chunk(data)
+		data = f.read(dsf_length['fmt'])
+		s = dsf_unpacked['fmt'](data)
 		results.append(s)
 
 		chunk_id = results[0][0]		# Should be 'fmt '
@@ -566,8 +517,8 @@ def check_dsf(filename, dsdfile):
 
 		# Read chunk header of 'data' chunk
 		results = []
-		data = f.read(struct_data_chunk_len)
-		s = struct_unpack_data_chunk(data)
+		data = f.read(dsf_length['data'])
+		s = dsf_unpacked['data'](data)
 		results.append(s)
 
 		chunk_id = results[0][0]
@@ -592,8 +543,8 @@ def check_dsf(filename, dsdfile):
 			f.seek(id3_chunk_offset)
 
 		results = []
-		data = f.read(struct_meta_chunk_len)
-		s = struct_unpack_meta_chunk(data)
+		data = f.read(dsf_length['meta'])
+		s = dsf_unpacked['meta'](data)
 		results.append(s)
 
 		chunk_id = results[0][0]
