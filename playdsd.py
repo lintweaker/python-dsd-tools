@@ -16,6 +16,8 @@
 # Use dsdlib.py
 # 0.6 10-Oct-14 JK
 # Implemented DSF playback
+# v0.7 12-Nov-14 JK
+# Switch to new rate functions
 
 import os.path
 import re
@@ -303,7 +305,7 @@ if channels != 2:
 
 print "DSD file type: %s" % dsdtype.upper()
 print "channels = %d" % channels
-print "rate = %d Hz [%s]" % (rate, dsdlib.dsdtype(rate))
+print "rate = %d Hz [%s]" % (rate, dsdlib.rate_to_string(rate))
 print "Total file size: %d" % myfile.fsize
 print "DSD data start at: %d" % myfile.datastart
 print "DSD data size: %d" % myfile.datasize

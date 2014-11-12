@@ -18,6 +18,8 @@
 # Add support for DSF
 # v0.5 08-Nov-14 Jurgen Kramer
 # Pythonize a bit
+# v0.6 12-Nov-14 Jurgen Kramer
+# Rework rate check/display functions
 
 #from struct import unpack, calcsize
 import struct
@@ -133,43 +135,91 @@ def getfiletype(filename, dsdfile):
 	# Not a DSD file
 	return dsdfile
 
-# Check if the rate is a valid DSD rate, max DSD512
-# Input: rate
-# Ouput: 0 = rate is valid. 1 = rate is invalid
-def check_rate(rate):
-	# Rates with base Fs = 44.100 kHz
-	if rate == 2822400 or rate == 5644800 or rate == 11289600 or rate == 22579200:
-		return 0
-	# Rates with base Fs = 48.000 kHz
-	if rate == 3072000 or rate == 6144000 or rate == 12288000 or rate == 24576000:
-		return 0
-	# Invalid rate
-	return 1
+# getmaxdsd
+# Returns max supported DSD rate. DSD64 = 1, DSD128 = 2, etc
+#
+def getmaxdsd():
+	# Max DSD512
+	return 4
 
-# dsdtype
-# Convert given rate to DSD64, DSD128 etc moniker
-def dsdtype(rate):
+# dsd_valid_rate
+# Check if given rate is a valid DSD rate
+#
+def dsd_valid_rate(rate):
+
+	maxdsdrate = getmaxdsd()
+	dsdrate = []
+
 	if rate % 44100 == 0:
-		#print "File has fs = 44k1 base"
-		if rate == 2822400:
-			return "DSD64"
-		if rate == 5644800:
-			return "DSD128"
-		if rate == 11289600:
-			return "DSD256"
-		if rate == 22579200:
-			return "DSD512"
+
+		dsdrates = set(get_dsd_rates(maxdsdrate, 44100))
+		if rate in dsdrates:
+			return True
+		else:
+			return False
+
 	if rate % 48000 == 0:
-		#print "File has fs = 48k base"
-		if rate == 3072000:
-			return "DSD64, fs = 48kHz"
-		if rate == 6144000:
-			return "DSD128, fs = 48kHz"
-		if rate == 12288000:
-			return "DSD256, fs = 48kHz"
-		if rate == 24576000:
-			return "DSD512, fs = 48kHz"
-	return "DSD??"
+
+		dsdrates = set(get_dsd_rates(maxdsdrate, 48000))
+		if rate in dsdrates:
+			return True
+		else:
+			return False
+
+	return False
+
+# valid_base_rate
+# Check if the given rate is has a valid DSD base rate (44k1/48k)
+#
+def valid_base_rate(rate):
+
+	if rate % 44100 == 0 or rate % 48000 == 0:
+		return True
+	return False
+
+# get_dsd_rates
+# Get all rates based on given base (44k1/48k) rate
+def get_dsd_rates(maxdsdrate, base):
+
+	dsd_base_rate = base*64
+	max_dsd = getmaxdsd()
+	rates = []
+
+	if base != 44100 and base != 48000:
+		return rates
+
+	for x in range(0, max_dsd):
+		rates.append(dsd_base_rate)
+		dsd_base_rate *= 2
+	return rates
+
+# rate_to_string
+# Convert rate to "DSD64", "DSD128" etc moniker
+def rate_to_string(rate):
+
+	if not valid_base_rate(rate):
+		return "DSD?? invalid DSD rate"
+
+	rate_strings = {}
+	base = 44100
+	maxdsdrate = getmaxdsd()
+
+	if rate % 48000 == 0:
+		base = 48000
+	rates = get_dsd_rates(maxdsdrate,base)
+
+	y = 0
+	for x in rates:
+		dsdstr = "DSD" + str(rates[y]/base)
+		if base == 48000:
+			dsdstr += ", fs=48kHz"
+		rate_strings[rates[y]] = dsdstr
+		y += 1
+
+	if rate in rate_strings:
+		return rate_strings[rate]
+	else:
+		return "DSD??"
 
 # DSDIFF Handle local chunks of property chunk
 def handle_prop_local_chunks(size, handle, dsdfile):
@@ -202,7 +252,7 @@ def handle_prop_local_chunks(size, handle, dsdfile):
 				props.append(s)
 				rate = props[0][0]
 				#print "Sample rate: %d Hz" % rate
-				if check_rate(rate) == 1:
+				if not dsd_valid_rate(rate):
 					return -1
 				dsdfile.rate = rate
 				ret += 1
@@ -497,6 +547,8 @@ def check_dsf(filename, dsdfile):
 		dsdfile.channels = dsf_chan_num
 
 		dsf_rate = results[0][6]
+		if not dsd_valid_rate(dsf_rate):
+			return dsdfile
 		dsdfile.rate = dsf_rate
 
 		dsf_sample_bits = results[0][7]
