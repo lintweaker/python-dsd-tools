@@ -83,7 +83,7 @@ for x in dsf_data:
 class dsdfile(Structure):
 	_fields_ = [
 			('type', 6*c_char),
-			('valid', c_bool),
+			('valid', c_byte),
 			('confedence', c_ushort),
 			('version', c_ulong),
 			('compress', c_bool),
