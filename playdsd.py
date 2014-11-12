@@ -316,7 +316,12 @@ f = open(audiofile, 'rb')
 f.seek(myfile.datastart)
 
 # Setup ALSA
-out = alsaaudio.PCM(alsaaudio.PCM_PLAYBACK, card="front:CARD=Audio,DEV=0")
+try:
+	out = alsaaudio.PCM(alsaaudio.PCM_PLAYBACK, card="front:CARD=Audio,DEV=0")
+except Exception as e:
+	print "\nError: Cannot play, %s\n" % e
+	sys.exit(1)
+
 out.setchannels(2)
 out.setrate(myfile.rate/8/4)
 out.setformat(alsaaudio.PCM_FORMAT_DSD_U32_LE)
