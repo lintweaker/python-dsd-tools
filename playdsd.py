@@ -18,6 +18,8 @@
 # Implemented DSF playback
 # v0.7 12-Nov-14 JK
 # Switch to new rate functions
+# v0.7 28-Nov-14 JK
+# Switch to DSD BE sample format
 
 import os.path
 import re
@@ -46,7 +48,7 @@ def signal_handler(signal, frame):
 # Test for needed sample format support
 def dsdformat():
 	try:
-		audiofmt = alsaaudio.PCM_FORMAT_DSD_U32_LE
+		audiofmt = alsaaudio.PCM_FORMAT_DSD_U32_BE
 		return 0
 	except:
 		return 1
@@ -60,20 +62,20 @@ def checkstream(streamfile):
 	# Loop through lines of stream0 file
 	for line in f:
 		line = line.replace("\n", "")
-		matchObj = re.search( r'DSD_U32_LE', line, re.M|re.I)
+		matchObj = re.search( r'DSD_U32_BE', line, re.M|re.I)
 		if matchObj:
 			#print "match!", matchObj.group()
 			return 0
 	return 3
 
-# Test card for native DSD support using the DSD_U32_LE sample format, only available for USB sound cards
+# Test card for native DSD support using the DSD_U32_BE sample format, only available for USB sound cards
 def checkdsd(card):
 	cardpath = "/proc/asound/" + card
 	streampath = cardpath + "/stream0"
 	if os.path.exists(cardpath):
 		#print "path ok for %s" % cardpath
 		if os.path.isfile(streampath):
-			# USB device, check for DSD_U32_LE support
+			# USB device, check for DSD_U32_BE support
 			return checkstream(streampath)
 		else:
 			# Not a USB card"
@@ -83,7 +85,7 @@ def checkdsd(card):
 		return 2
 	return 0
 
-# Walk through available sound cards and check DSD_U32_LE sample format support
+# Walk through available sound cards and check DSD_U32_BE sample format support
 # This only works for USB based soundcards
 def checksndcards():
 	cards = alsaaudio.cards()
@@ -324,7 +326,7 @@ except Exception as e:
 
 out.setchannels(2)
 out.setrate(myfile.rate/8/4)
-out.setformat(alsaaudio.PCM_FORMAT_DSD_U32_LE)
+out.setformat(alsaaudio.PCM_FORMAT_DSD_U32_BE)
 out.setperiodsize(11025)
 
 # Start with a few ms of DSD silence data
