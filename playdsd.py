@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 # playdsd.py - Native DSD playback for DSD files
-# Uses DSD_U32_LE sample format
+# Uses DSD_U32_BE sample format
 # (c) 2014 Jurgen Kramer
 # License: GPLv2
 #
@@ -20,6 +20,9 @@
 # Switch to new rate functions
 # v0.7 28-Nov-14 JK
 # Switch to DSD BE sample format
+# v0.7thf 29-Aug-15 Dariusz Garbowski
+# Fix ALSA device initialisation
+# [typo] Fix comment: which sample format playdsd.py uses
 
 import os.path
 import re
@@ -319,7 +322,7 @@ f.seek(myfile.datastart)
 
 # Setup ALSA
 try:
-	out = alsaaudio.PCM(alsaaudio.PCM_PLAYBACK, card="front:CARD=Audio,DEV=0")
+	out = alsaaudio.PCM(alsaaudio.PCM_PLAYBACK, card="front:CARD='%s',DEV=0" % audiodev)
 except Exception as e:
 	print "\nError: Cannot play, %s\n" % e
 	sys.exit(1)
