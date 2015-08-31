@@ -159,7 +159,7 @@ def dsfxmos(size, indata, outdata, lsbfirst):
 			outdata[i+0x05] = revbits(indata[j+4096+0x01])
 			outdata[i+0x06] = revbits(indata[j+4096+0x02])
 			outdata[i+0x07] = revbits(indata[j+4096+0x03])
-			j += 4			
+			j += 4
 
 	else:
 		j = 0
