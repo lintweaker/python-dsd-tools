@@ -16,6 +16,12 @@
 # Handle local property ('PROP') chunks, FVER version check
 # v0.4 05-Oct-14 Jurgen Kramer
 # Accept 0x1040000 as a valid version for DSDIFF (minimum version should be 0x1050000)
+# v0.5 11-Mar-16 Jurgen Kramer
+# Add check if file could hang MPD at the end of the file (sample data size not dividable by 4 bug)
+# Adjust print statements to new style
+# Additional compression info
+
+from __future__ import print_function
 
 import struct
 import sys
@@ -83,7 +89,7 @@ struct_unpack_dsd_chunk = struct.Struct(struct_dsd_chunk).unpack_from
 
 #-- Functions
 def wrongfile(marker):
-	print "Not a DSDIFF file! Error at '%s' marker" % marker
+	print( "Not a DSDIFF file! Error at '%s' marker" % marker )
 	sys.exit(1)
 
 # Handle local chunks of property chunk
@@ -108,53 +114,53 @@ def handle_prop_local_chunks(size):
 			chunk_id = props[1][0]
 			chunk_size = props[1][1]
 
-			#print "2nd local property chunk '%s'" % chunk_id
-			#print "2nd local property chunk size is %d" % chunk_size
-
 			# Sample Rate Chunk
 			if chunk_id == 'FS  ':
-				print "Sample Rate Chunk"
+				print( "Sample Rate Chunk" )
 				props = []
 				propdata = f.read(struct_rate_len)
 				s = struct_unpack_rate(propdata)
 				props.append(s)
 				rate = props[0][0]
-				print "Sample rate: %d Hz" % rate
+				print( "Sample rate: %d Hz" % rate )
 				ret += 1
 				curpos = f.tell()
 				continue
 
 			# Channels Chunk
 			if chunk_id == 'CHNL':
-				print "Channels Chunk"
+				print( "Channels Chunk" )
 				props = []
 				propdata = f.read(struct_chan_len)
 				s = struct_unpack_chan(propdata)
 				props.append(s)
 				channels = props[0][0]
-				print "File has %d channels" % channels
+				print( "File has %d channels" % channels )
 				for i in range(0, channels):
 					props = []
 					propdata = f.read(struct_chandes_len)
 					s = struct_unpack_chandes(propdata)
 					props.append(s)
 					chandes = props[0][0]
-					print "Channel: %s" % chandes
+					print( "Channel: %s" % chandes )
 				ret += 1
 				curpos = f.tell()
 				continue
 					
 			# Compression Type Chunk
 			if chunk_id == 'CMPR':
-				print "Compression Type Chunk"
+				print( "Compression Type Chunk" )
 				props = []
 				propdata = f.read(struct_cmp_len)
 				s = struct_unpack_cmp(propdata)
 				props.append(s)
 				cmptype = props[0][0]
 				cmplen = props[0][1]
-				print "Compression type: '%s'" % cmptype
-				print "Compression string length: %d" % cmplen
+				compressed = "Not compressed"
+				if cmptype != 'DSD ':
+					compressed = " Compressed"
+				print( "Compression type: '%s' (%s)" % ( cmptype, compressed ) )
+				print( "Compression string length: %d" % cmplen )
 				for i in range(0, cmplen+1):
 					propdata = f.read(struct_cmpstr_len)
 					s = struct_unpack_cmpstr(propdata)
@@ -166,8 +172,8 @@ def handle_prop_local_chunks(size):
 				continue
 
 			if chunk_id == 'ABSS':				# Optional
-				print "Absolute Start Time Chunk"
-				print "Size %d" % chunk_size
+				print( "Absolute Start Time Chunk" )
+				print( "Size %d" % chunk_size )
 				props = []
 				propdata = f.read(struct_abbs_len)
 				s = struct_unpack_abbs(propdata)
@@ -176,15 +182,15 @@ def handle_prop_local_chunks(size):
 				mins = props[0][1]
 				secs = props[0][2]
 				samples = props[0][3]
-				print "Offset: %d hrs, %d mins, %d secs and %d samples " %(hrs, mins, secs, samples)
+				print( "Offset: %d hrs, %d mins, %d secs and %d samples " %(hrs, mins, secs, samples) )
 
 				curpos = f.tell()
 				continue
 
 			if chunk_id == 'LSCO':				# Optional
-				print "Loudspeaker Configuration Chunk"
+				print( "Loudspeaker Configuration Chunk" )
 				if chunk_size != 2:
-					print "Illegal chunk size %d" % chunk_size
+					print( "Illegal chunk size %d" % chunk_size )
 					ret = -1
 					return ret
 
@@ -193,15 +199,13 @@ def handle_prop_local_chunks(size):
 				s = struct_unpack_spkr(propdata)
 				props.append(s)
 				spkrcfg = props[0][0]
-				print "Speaker config is: %d" % spkrcfg
+				print( "Speaker config is: %d" % spkrcfg )
 				curpos = f.tell()
 				continue
 
-		#print "Done with while loop, ret = %d" % ret
 		return ret
 
 	else:
-		#print "Illegal/wrong chunk id '%s' " % chunk_id
 		ret = -1
 		return ret
 	
@@ -213,17 +217,19 @@ def handle_prop_local_chunks(size):
 
 # Check command line arguments
 if len(sys.argv) <= 1:
-	print "Missing filename to test on"
+	print( "Missing filename to test on" )
 	sys.exit(1)
 
 filename = sys.argv[1]
 
-print "\nResults for file\t\t: %s\n" % filename
+print( "\nResults for file\t: %s\n" % filename )
 
 results = []
 confedence = 0
 neededconf = 4
 id3tag = 0
+could_trigger_mpd_hang = False
+
 
 with open(filename, "rb") as f:
 
@@ -243,10 +249,10 @@ with open(filename, "rb") as f:
 
 	confedence += 1
 
-	print "Found start chunk\t: '%s'" % chunk_id
-	print "Total file size\t\t: %d" % dsd_file_size
+	print( "Found start chunk\t: '%s'" % chunk_id )
+	print( "Total file size\t\t: %d" % dsd_file_size )
 
-	print "\nFile pos now at\t\t: %d" % f.tell()
+	print( "\nFile pos now at\t\t: %d" % f.tell() )
 
 	# Loop through all the remaining chunks
 	while True:
@@ -258,8 +264,8 @@ with open(filename, "rb") as f:
 		chunk_id = results[0][0]
 		chunk_size = results[0][1]
 
-		print "Found chunk with id\t: '%s'" % chunk_id
-		print "Chunk size\t\t: %d" % chunk_size
+		print( "Found chunk with id\t: '%s'" % chunk_id )
+		print( "Chunk size\t\t: %d" % chunk_size )
 
 		if chunk_id == 'FVER':
 			results = []
@@ -269,7 +275,7 @@ with open(filename, "rb") as f:
 			version = results[0][0]
 			#print "FVER: version 0x%06x " % version
 			if version != 0x1050000 and version != 0x1040000:
-				print "Illegal/unsupported version 0x%06x" % version
+				print( "Illegal/unsupported version 0x%06x" % version )
 				break
 			confedence += 1
 
@@ -279,16 +285,19 @@ with open(filename, "rb") as f:
 			continue
 
 		if chunk_id == 'DSD ' or chunk_id == 'DST ':
-			print "DSD sample data starts at: %d" % f.tell()
+			print( "DSD sample data starts at: %d" % f.tell() )
 			confedence += 1
+			# Test if this file can trigger MPD hang bug
+			if chunk_id == 'DSD ' and chunk_size % 4 != 0:
+				could_trigger_mpd_hang = True
 
 		if chunk_id == 'PROP':
 			ret = handle_prop_local_chunks(chunk_size)
 			if ret == -1:
-				print "Problems with property chunk"
+				print( "Problems with property chunk" )
 				break
 			if ret != 3:
-				print "Missing required local chunks in property chunk"
+				print( "Missing required local chunks in property chunk" )
 				break
 
 			confedence += 1
@@ -302,20 +311,22 @@ with open(filename, "rb") as f:
 			if seekpos > dsd_file_size:
 				break
 		f.seek(seekpos)
-		print "\nFile pos now at\t\t: %d" % f.tell()
+		print( "\nFile pos now at\t\t: %d" % f.tell() )
 
 
 	f.close()
-	print "\nConclusion\t\t:",
+	print( "\nConclusion\t\t: ", end='' )
 	if confedence < neededconf:
-		print ">>This is not a properly DSDIFF formatted file<<"
-		print "\t\t\t\tConfedence = %d, needs to be %d" % (confedence, neededconf)
+		print( ">>This is not a properly DSDIFF formatted file<<" )
+		print( "\t\t\t\tConfedence = %d, needs to be %d" % (confedence, neededconf) )
 	else:
 		if id3tag == 0:
-			print "This is a properly formatted DSDIFF file"
+			print( "This is a properly formatted DSDIFF file" )
 		else:
-			print "This is a properly formatted DSDIFF file with unofficial ID3 tag"
-		
-	print "\n"
+			print( "This is a properly formatted DSDIFF file with unofficial ID3 tag" )
+		if could_trigger_mpd_hang:
+			print( "Warning\t\t\t: !!This file could hang MPD at the end of the song!!" )
+
+	print ( "" )
 	sys.exit(0)
 
