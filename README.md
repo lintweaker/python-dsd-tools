@@ -55,4 +55,4 @@ Install the source RPM:
 
 Install the newly created RPM:
 
-``dnf install ~/rpmbuild/RPMS/`uname -m`/python-alsaaudio-0.7-8.fc20.`uname -m`.rpm``
+``dnf install ~/rpmbuild/RPMS/`uname -m`/python-alsaaudio-0.7-11.fc25.`uname -m`.rpm``
