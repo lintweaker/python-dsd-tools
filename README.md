@@ -47,7 +47,7 @@ If needed, first setup your system for RPM building, see [Fedora, building a cus
 
 Install the source RPM:
 
-`rpm -ivh SRPMS/python-alsaaudio-0.7-8.fc20.src.rpm`
+`rpm -ivh SRPMS/python-alsaaudio-0.7-11.fc25.src.rpm`
 
 `cd ~/rpmbuild/SPECS`
 
@@ -55,4 +55,4 @@ Install the source RPM:
 
 Install the newly created RPM:
 
-``yum localinstall ~/rpmbuild/RPMS/`uname -m`/python-alsaaudio-0.7-8.fc20.`uname -m`.rpm``
+``dnf install ~/rpmbuild/RPMS/`uname -m`/python-alsaaudio-0.7-8.fc20.`uname -m`.rpm``
