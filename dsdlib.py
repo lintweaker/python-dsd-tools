@@ -139,8 +139,8 @@ def getfiletype(filename, dsdfile):
 # Returns max supported DSD rate. DSD64 = 1, DSD128 = 2, etc
 #
 def getmaxdsd():
-	# Max DSD512
-	return 4
+	# Max DSD1024
+	return 5
 
 # dsd_valid_rate
 # Check if given rate is a valid DSD rate
