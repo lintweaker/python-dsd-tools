@@ -147,7 +147,7 @@ with open(filename, "rb") as f:
         if dsf_chan_type == 5:
             spkr_setup = "4 channels"
         if dsf_chan_type == 6:
-            sprk_setup = "5 channels"
+            spkr_setup = "5 channels"
         if dsf_chan_type == 7:
             spkr_setup == "5.1 channels"
 
