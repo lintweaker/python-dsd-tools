@@ -27,6 +27,7 @@
 # Adapt for using with Python3
 # v0.82 25-Feb-2024 JK
 # DSF playback restored
+# - DSDIFF playback currently broken
 
 import os.path
 import re
